@@ -33,7 +33,7 @@ namespace DotNetVersions
         }
 
         //Writes the version
-        private static void WriteVersion(string version, string spLevel = "")
+        private static void WriteVersion(string version, string spLevel = "", string release = "")
         {
             version = version.Trim();
             if (string.IsNullOrEmpty(version))
@@ -41,10 +41,15 @@ namespace DotNetVersions
 
             string spLevelString = "";
             if (!string.IsNullOrEmpty(spLevel))
-                spLevelString = " Service Pack " + spLevel;
+                spLevelString = $" Service Pack {spLevel}";
 
-            Console.WriteLine($"{version}{spLevelString}");
+            string releaseString = "";
+            if (!string.IsNullOrEmpty(release))
+                releaseString = $" => Release {release}";
+
+            Console.WriteLine($"{version}{spLevelString}{releaseString}");
         }
+
         private static void Get1To45VersionFromRegistry()
         {
             // Opens the registry key for the .NET Framework entry.
@@ -108,6 +113,7 @@ namespace DotNetVersions
                 }
             }
         }
+
         private static void Get45PlusFromRegistry()
         {
             const string subkey = @"SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full\";
@@ -116,22 +122,23 @@ namespace DotNetVersions
             {
                 if (ndpKey == null)
                     return;
-                //First check if there's an specific version indicated
-                if (ndpKey.GetValue("Version") != null)
-                {
-                    WriteVersion(ndpKey.GetValue("Version").ToString());
-                }
+
+                object versionObj = ndpKey.GetValue("Version");
+                object releaseObj = ndpKey.GetValue("Release");
+
+                string version = "";
+                string release = "";
+
+                if (versionObj != null)
+                    version = (string)versionObj;
+
+                if (releaseObj != null)
+                    release = CheckFor45PlusVersion((int)releaseObj);
+
+                if (versionObj == null)
+                    WriteVersion(release);
                 else
-                {
-                    if (ndpKey != null && ndpKey.GetValue("Release") != null)
-                    {
-                        WriteVersion(
-                            CheckFor45PlusVersion(
-                                    (int)ndpKey.GetValue("Release")
-                                )
-                        );
-                    }
-                }
+                    WriteVersion(version, "", release);
             }
 
             // Checking the version using >= enables forward compatibility.
